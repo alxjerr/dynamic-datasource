@@ -5,12 +5,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 
-@EnableApolloConfig(value = {"druid-application"})
+@EnableApolloConfig
 @SpringBootApplication
 public class DynamicDatasourceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(DynamicDatasourceApplication.class, args);
+//        System.out.println("--------------------------------" + ctx.getBean(DataSource.class));
     }
 
 }

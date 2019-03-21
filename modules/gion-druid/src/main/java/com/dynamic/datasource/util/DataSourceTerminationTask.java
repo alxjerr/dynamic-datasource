@@ -1,11 +1,11 @@
 package com.dynamic.datasource.util;
 
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.HikariPoolMXBean;
+import com.alibaba.druid.pool.DruidDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -40,8 +40,8 @@ public class DataSourceTerminationTask implements Runnable {
     logger.info("Trying to terminate data source: {}", dataSource);
 
     try {
-      if (dataSource instanceof HikariDataSource) {
-        return terminateHikariDataSource((HikariDataSource) dataSource);
+      if (dataSource instanceof DruidDataSource) {
+        return terminateHikariDataSource((DruidDataSource) dataSource);
       }
 
       logger.error("Not supported data source: {}", dataSource);
@@ -60,22 +60,21 @@ public class DataSourceTerminationTask implements Runnable {
    * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/742">Support graceful shutdown of connection
    * pool</a>
    */
-  private boolean terminateHikariDataSource(HikariDataSource dataSource) {
+  private boolean terminateHikariDataSource(DruidDataSource dataSource) throws SQLException {
 
-    HikariPoolMXBean poolMXBean = dataSource.getHikariPoolMXBean();
+    dataSource.shrink();
 
-    //evict idle connections
-    poolMXBean.softEvictConnections();
+    int activeCount = dataSource.getActiveCount();
 
-    if (poolMXBean.getActiveConnections() > 0 && retryTimes < MAX_RETRY_TIMES) {
+    if (activeCount > 0 && retryTimes < MAX_RETRY_TIMES) {
       logger.warn("Data source {} still has {} active connections, will retry in {} ms.", dataSource,
-          poolMXBean.getActiveConnections(), RETRY_DELAY_IN_MILLISECONDS);
+              activeCount, RETRY_DELAY_IN_MILLISECONDS);
       return false;
     }
 
-    if (poolMXBean.getActiveConnections() > 0) {
+    if (activeCount > 0) {
       logger.warn("Retry times({}) >= {}, force closing data source {}, with {} active connections!", retryTimes,
-          MAX_RETRY_TIMES, dataSource, poolMXBean.getActiveConnections());
+          MAX_RETRY_TIMES, dataSource, activeCount);
     }
 
     dataSource.close();

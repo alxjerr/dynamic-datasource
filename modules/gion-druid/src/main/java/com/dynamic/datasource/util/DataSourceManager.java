@@ -14,10 +14,19 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-@Component
+//@Component
 public class DataSourceManager {
 
     private static final Logger logger = LoggerFactory.getLogger(DataSourceManager.class);
+
+    private String bindTarget;
+
+    public DataSourceManager() {
+    }
+
+    public DataSourceManager(String bindTarget) {
+        this.bindTarget = bindTarget;
+    }
 
     @Autowired
     private CustomizedConfigurationPropertiesBinder binder;
@@ -25,20 +34,16 @@ public class DataSourceManager {
     @Autowired
     private DataSourceProperties dataSourceProperties;
 
-    /**
-     * create a hikari data source
-     *
-     * @see org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration.Hikari#dataSource
-     */
     public DruidDataSource createDataSource() {
         DruidDataSource dataSource = dataSourceProperties.initializeDataSourceBuilder().type(DruidDataSource.class).build();
         if (StringUtils.hasText(dataSourceProperties.getName())) {
             dataSource.setName(dataSourceProperties.getName());
         }
         Bindable<?> target = Bindable.of(DruidDataSource.class).withExistingValue(dataSource);
-        this.binder.bind("spring.datasource.dbcp2", target);
+//        this.binder.bind("spring.datasource.druid", target);
+        this.binder.bind(bindTarget, target);
         return dataSource;
-    }
+    }//dbcp2
 
 
     public DruidDataSource createAndTestDataSource() throws SQLException {
@@ -50,19 +55,11 @@ public class DataSourceManager {
             newDataSource.close();
             throw ex;
         }
+
         return newDataSource;
     }
 
     private void testConnection(DruidDataSource dataSource) throws SQLException {
-        /*DruidPooledConnection connection = null;
-        try {
-            connection = dataSource.getConnection();
-        }catch (Exception e) {
-            //return the connection
-        }finally {
-            connection.close();
-        }*/
-
         DruidPooledConnection connection = dataSource.getConnection();
         connection.close();
     }
